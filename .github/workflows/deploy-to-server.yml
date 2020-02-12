@@ -1,0 +1,39 @@
+name: Test CI
+
+on: 
+  push:
+    branches: 
+      - test
+    
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12.x]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+    - name: Build
+      run: |
+        npm install && npm run build
+
+    - name: Install SSH key for deploy
+      uses: shimataro/ssh-key-action@v1
+      with:
+        name: id_rsa-deploy
+        private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known-hosts: ${{ secrets.KNOWN_HOSTS_TEST }}
+        config: |                                         # will be appended!
+          Host deploy
+            HostName test.yuanlinbang.net
+            User user-of-deploy
+            IdentityFile ~/.ssh/id_rsa-deploy
+    - name: Deploy
+      run: |
+        rsync -rv $GITHUB_WORKSPACE/dist/ root@test.yuanlinbang.net:/www/mis-desktop-web-test/dist/
